@@ -1,0 +1,32 @@
+- name: Setting Up MongoDB Server
+  hosts: mongodb 
+  become: yes
+  tasks:
+  - name: Setting up MongodB repo and Installing
+    ansible.builtin.copy:
+      src: mongo.repo
+      dest: /etc/yum.repos.d/mongo.repo
+    ansible.builtin.dnf:
+      name: mongodb-org 
+      state: present
+  
+  - name: Start and enable service
+    ansible.builtin.service:
+      name: mongod
+      state: started
+      enabled: yes
+  
+  - name: Replace the bind IP
+    ansible.builtin.replace:
+      path: /etc/mongo.conf
+      regexp: '127.0.0.1'
+      replace: '0.0.0.0'
+  
+  - name: Restart service
+    ansible.builtin.service:
+      name: mongod
+      state: restarted
+      
+  
+
+
