@@ -1,5 +1,6 @@
 - name: Setting up catalogue microservice
   hosts: catalogue
+  become: yes
   tasks:
   - name: Disabling default nodejs
     ansible.builtin.command: dnf module disable nodejs -y
