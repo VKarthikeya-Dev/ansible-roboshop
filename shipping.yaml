@@ -1,0 +1,90 @@
+- name: Setting up shipping component
+  hosts: payment
+  become: yes
+  tasks:
+  - name: Installing maven 
+    ansible.builtin.dnf:
+      name: {{ item }}      
+      state: present
+    loop:
+    - maven
+    - mysql
+  
+  - name: Installing Python Packages
+    ansible.builtin.pip:
+      name: {{ item }}
+      executable: pip3.9
+    loop:
+    - cryptography
+    - PyMySQL
+
+  - name: Creating directory
+    ansible.builtin.file:
+      path: /app
+      state: directory
+
+  - name: Creating System User
+    ansible.builtin.user:
+      name: roboshop
+      comment: Roboshop User
+      system: true
+      shell: /sbin/nologin
+      home: /app
+
+  - name: Downloading the shipping content
+    ansible.builtin.get_url:
+      url: https://roboshop-artifacts.s3.amazonaws.com/shipping-v3.zip 
+      dest: /tmp/shipping.zip
+  
+  - name: UNzipping the content
+    ansible.builtin.unarchive:
+      src: /tmp/shipping.zip
+      dest: /app
+      remote_src: yes
+  
+  - name: Install dependencies
+    ansible.builtin.command: mvn clean package
+    args:
+      chdir: /app
+  
+  - name: Moving and renaming Jar file
+    ansible.builtin.command: mv target/shipping-1.0.jar shipping.jar
+    args:
+      chdir: /app
+  
+  - name: Setting up shipping service file
+    ansible.builtin.copy:
+      src: shipping.service
+      dest: /etc/systemd/system/shipping.service
+  
+  - name: Daemon reload
+    ansible.builtin.systemd_service:
+      daemon-reload: true
+  
+  - name: Starting and enabling service
+    ansible.builtin.service:
+      name: shipping
+      state: started
+      enabled: yes
+  
+  - name: Importing data into mysql
+    tag:
+    - import
+    community.mysql.mysql_db:
+      login_user: root
+      login_password: Roboshop@1
+      login_host: mysql.vkdevops.site 
+      state: import 
+      target: {{ item }}
+    loop:
+    - /app/db/schema.sql
+    - /app/db/app-user.sql
+    - /app/db/master-data.sql
+  
+  - name: restart shipping
+    tags:
+    - import
+    ansible.builtin.service:
+      state: restarted
+      name: shipping
+  
