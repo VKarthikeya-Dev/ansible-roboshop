@@ -56,9 +56,12 @@
   - name: checking if data is already loaded
     ansible.builtin.command: mongosh --host mongodb.vkdevops.site --eval 'db.getMongo().getDBNames().indexOf("catalogue")'
     register: command_result
+  - name: Print outcome
+    ansible.builtin.debug:
+      msg: {{ command_result}}
   - name: Load data
     ansible.builtin.shell: mongosh --host mongodb.vkdevops.site < /app/db/master-data.js
-    when: command_result | int < 0
+    when: command_result.stdout | int < 0
 
 
 
