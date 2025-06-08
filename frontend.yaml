@@ -1,0 +1,17 @@
+- name: Setting up the frontend
+  hosts: frontend
+  become: yes
+  tasks: 
+  - name: Disable default nginx module
+    ansible.builtin.command: dnf module disable nginx -y
+  - name: Enable nginx 1.24 module
+    ansible.builtin.command: dnf module enable nginx:1.24 -y
+  - name: Installing nginx
+    ansible.builtin.dnf:
+      name: nginx
+      state: present
+  - name: Starting and enabling nginx
+    ansible.builtin.service:
+      name: nginx
+      state: started
+      enabled: yes
