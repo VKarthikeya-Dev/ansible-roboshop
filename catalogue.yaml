@@ -42,7 +42,7 @@
       daemon-reload: true
   - name: Starting and enabling catalogue
     ansible.builtin.service:
-      name: catlogue
+      name: catalogue
       state: started
       enabled: yes
   - name: Setting up mongodb repo
