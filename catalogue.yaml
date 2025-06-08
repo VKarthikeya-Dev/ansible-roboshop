@@ -1,0 +1,60 @@
+- name: Setting up catalogue microservice
+  hosts: catalogue
+  tasks:
+  - name: Disabling default nodejs
+    ansible.builtin.command: dnf module disable nodejs -y
+  - name: Enable nodejs:20
+    ansible.builtin.command: dnf module enable nodejs:20 -y
+  - name: Installing nodejs:20
+    ansible.builtin.dnf:
+      name: nodejs
+      state: present
+  - name: Creating system User
+    ansible.builtin.user:
+      name: roboshop
+      comment: Roboshop system user
+      shell: /sbin/nologin
+      system: true
+      home: /app
+  - name: Downloading zip file
+    ansible.builtin.get_url:
+      url: https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip 
+      dest: /tmp/catalogue.zip
+  - name: Unzipping the file
+    ansibile.builtin.unarchive:
+      src: /tmp/catalogue.zip
+      dest: /app
+      remote_src: yes
+  - name: Install npm dependencies
+    community.general.npm:
+      path: /app
+  - name: Setting up system service file
+    ansible.builtin.copy:
+      src: catalogue.service
+      dest: /etc/systemd/system/catalogue.service
+  - name: Daemon reload
+    ansibile.builtin.systemd_service:
+      daemon-reload: true
+  - name: Starting and enabling catalogue
+    ansible.builtin.serice:
+      name: catlogue.service
+      state: started
+      enabled: yes
+  - name: Setting up mongodb repo
+    ansible.builtin.copy:
+      src: mongo.repo
+      dest: /etc/yum.repo.d/mongo.repo
+  - name: Installing mongodb client
+    ansible.builtin.dnf:
+      name: mongodb-mongosh
+      state: present
+  - name: checking if data is already loaded
+    ansible.builtin.command: mongosh --host mongodb.vkdevops.site --eval 'db.getMongo().getDBNames().indexOf("catalogue")'
+    register: command_result
+  - name: Load data
+    ansible.builtin.shell: mongosh --host mongodb.vkdevops.site < /app/db/master-data.js
+    when: command_result | int < 0
+
+
+
+
